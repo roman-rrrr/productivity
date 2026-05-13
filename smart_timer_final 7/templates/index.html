@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Timer — Настройки</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #F7F6F3; --surface: #FFFFFF; --blue: #2563EB; --blue-light: #EFF6FF;
+      --blue-dim: #BFDBFE; --blue-text: #1D4ED8;
+      --text: #111827; --text-2: #6B7280; --text-3: #9CA3AF; --border: #E5E7EB;
+    }
+    [data-theme="dark"] {
+      --bg: #0F1117; --surface: #1A1D27; --blue: #3B82F6; --blue-light: #1e2a3a;
+      --blue-dim: #1e3a5f; --blue-text: #60A5FA;
+      --text: #F1F5F9; --text-2: #94A3B8; --text-3: #475569; --border: #2D3148;
+    }
+    html, body { height: 100%; }
+    body {
+      background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 2rem; transition: background 0.3s, color 0.3s;
+    }
+
+    /* ── Theme toggle ── */
+    .theme-btn {
+      position: fixed; top: 1.25rem; right: 1.25rem;
+      width: 36px; height: 36px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.2s, background 0.3s;
+      padding: 0;
+    }
+    .theme-btn:hover { border-color: var(--blue); }
+    .theme-btn .icon-moon { display: block; }
+    .theme-btn .icon-sun  { display: none; }
+    [data-theme="dark"] .theme-btn .icon-moon { display: none; }
+    [data-theme="dark"] .theme-btn .icon-sun  { display: block; }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+      padding: 2.5rem; width: 100%; max-width: 440px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 24px rgba(0,0,0,0.04);
+      animation: up 0.4s ease both; transition: background 0.3s, border-color 0.3s;
+    }
+    @keyframes up { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+    .back {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      font-size: 0.75rem; color: var(--text-3); text-decoration: none;
+      margin-bottom: 1.75rem; transition: color 0.15s;
+    }
+    .back:hover { color: var(--blue); }
+    h1 { font-size: 1.4rem; font-weight: 600; color: var(--text); margin-bottom: 0.25rem; }
+    .subtitle { font-size: 0.8rem; color: var(--text-3); margin-bottom: 2rem; }
+    .field { margin-bottom: 1.25rem; }
+    label { display: block; font-size: 0.75rem; font-weight: 500; color: var(--text-2); margin-bottom: 0.4rem; }
+    input {
+      width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 1rem;
+      padding: 0.65rem 0.9rem; outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.3s;
+    }
+    input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    input::placeholder { color: var(--text-3); }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+    .hint {
+      font-size: 0.72rem; color: var(--blue-text); margin-bottom: 1.75rem;
+      padding: 0.75rem; background: var(--blue-light); border-radius: 8px; line-height: 1.6;
+      transition: background 0.3s;
+    }
+    button[type="submit"] {
+      width: 100%; padding: 0.85rem; background: var(--blue); color: #fff;
+      font-family: 'Inter', sans-serif; font-size: 0.875rem; font-weight: 500;
+      border: none; border-radius: 8px; cursor: pointer; transition: background 0.15s, transform 0.1s;
+    }
+    button[type="submit"]:hover { background: var(--blue-text); transform: translateY(-1px); }
+  </style>
+</head>
+<body>
+  <button class="theme-btn" onclick="toggleTheme()" aria-label="Переключить тему">
+    <svg class="icon-moon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M13.5 10.5A6 6 0 0 1 5.5 2.5a6 6 0 1 0 8 8z" stroke="#6B7280" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <svg class="icon-sun" width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="3" stroke="#94A3B8" stroke-width="1.25"/>
+      <line x1="8" y1="1"    x2="8"    y2="2.5"  stroke="#94A3B8" stroke-width="1.25" stroke-linecap="round"/>
+      <line x1="8" y1="13.5" x2="8"    y2="15"   stroke="#94A3B8" stroke-width="1.25" stroke-linecap="round"/>
+      <line x1="1" y1="8"    x2="2.5"  y2="8"    stroke="#94A3B8" stroke-width="1.25" stroke-linecap="round"/>
+      <line x1="13.5" y1="8" x2="15"   y2="8"    stroke="#94A3B8" stroke-width="1.25" stroke-linecap="round"/>
+      <line x1="2.93" y1="2.93"   x2="3.99" y2="3.99"   stroke="#94A3B8" stroke-width="1.25" stroke-linecap="round"/>
+      <line x1="12.01" y1="12.01" x2="13.07" y2="13.07" stroke="#94A3B8" stroke-width="1.25" stroke-linecap="round"/>
+      <line x1="13.07" y1="2.93"  x2="12.01" y2="3.99"  stroke="#94A3B8" stroke-width="1.25" stroke-linecap="round"/>
+      <line x1="3.99"  y1="12.01" x2="2.93"  y2="13.07" stroke="#94A3B8" stroke-width="1.25" stroke-linecap="round"/>
+    </svg>
+  </button>
+
+  <div class="card">
+    <a href="/" class="back">← Назад</a>
+    <h1>Новый день</h1>
+    <p class="subtitle">Настрой параметры своей работы</p>
+
+    <form action="/start" method="POST">
+      <div class="field">
+        <label>До скольки работаешь</label>
+        <input type="text" name="able_to_work" placeholder="18:00" required />
+      </div>
+      <hr class="divider">
+      <div class="row">
+        <div class="field">
+          <label>Работа (мин)</label>
+          <input type="number" name="no_break" placeholder="25" min="1" />
+        </div>
+        <div class="field">
+          <label>Короткий перерыв</label>
+          <input type="number" name="short_break" placeholder="5" min="1" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Длинный перерыв (мин)</label>
+        <input type="number" name="long_break" placeholder="15" min="1" />
+      </div>
+      <p class="hint">💡 Каждые 4 рабочих цикла — длинный перерыв. Метод Pomodoro.</p>
+      <button type="submit">Запустить →</button>
+    </form>
+  </div>
+
+  <script>
+    const saved = localStorage.getItem('st_theme') || 'light';
+    document.documentElement.setAttribute('data-theme', saved);
+    function toggleTheme() {
+      const cur = document.documentElement.getAttribute('data-theme');
+      const next = cur === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('st_theme', next);
+      document.documentElement.setAttribute('data-theme', next);
+    }
+
+    // Автофокус и удобный ввод времени окончания работы
+    window.addEventListener('DOMContentLoaded', () => {
+      const input = document.querySelector('input[name="able_to_work"]');
+      if (!input) return;
+      input.focus();
+
+      input.addEventListener('input', () => {
+        let digits = input.value.replace(/\D/g, '');
+        if (digits.length > 4) digits = digits.slice(0, 4);
+        if (digits.length <= 2) {
+          // только часы, двоеточие не ставим
+          input.value = digits;
+        } else {
+          const h = digits.slice(0, digits.length - 2);
+          const m = digits.slice(-2);
+          input.value = h + ':' + m;
+        }
+      });
+    });
+  </script>
+</body>
+</html>

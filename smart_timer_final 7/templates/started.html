@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Timer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@200;300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#F7F6F3;--surface:#FFF;--surface2:#F3F4F6;
+      --blue:#2563EB;--blue-l:#EFF6FF;--blue-d:#BFDBFE;--blue-t:#1D4ED8;
+      --green:#059669;--green-l:#ECFDF5;--green-d:#A7F3D0;
+      --text:#111827;--t2:#6B7280;--t3:#9CA3AF;--border:#E5E7EB;
+      --red:#EF4444;--red-l:#FEF2F2;
+      --orange:#D97706;--orange-l:#FFFBEB;--orange-d:#FDE68A;
+      --purple:#7C3AED;
+    }
+    [data-theme=dark]{
+      --bg:#0F1117;--surface:#1A1D27;--surface2:#22263A;
+      --blue:#3B82F6;--blue-l:#1e2a3a;--blue-d:#1e3a5f;--blue-t:#60A5FA;
+      --green:#34D399;--green-l:#0d2a20;--green-d:#065F46;
+      --text:#F1F5F9;--t2:#94A3B8;--t3:#475569;--border:#2D3148;
+      --red:#F87171;--red-l:#2a1a1a;
+      --orange:#FBBF24;--orange-l:#2a2010;--orange-d:#78350F;
+    }
+    html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;overflow:hidden;transition:background .3s,color .3s}
+
+    /* ── TOPBAR ── */
+    .topbar{position:fixed;top:0;left:0;right:0;z-index:20;height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 1.25rem;background:var(--surface);border-bottom:1px solid var(--border);transition:background .3s,border-color .3s;gap:.75rem}
+    .brand{font-size:.72rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);white-space:nowrap}
+    .topbar-center{display:flex;align-items:center;gap:.6rem;flex:1;justify-content:center}
+    .mode-pill{font-size:.7rem;font-weight:500;padding:.25rem .75rem;border-radius:100px;background:var(--surface2);color:var(--t3);transition:all .4s;white-space:nowrap}
+    .mode-pill.work{background:var(--blue-l);color:var(--blue-t)}
+    .mode-pill.chill{background:var(--green-l);color:var(--green)}
+    .mode-pill.paused{background:#FEF9C3;color:#854D0E}
+    .mode-pill.finished{background:var(--orange-l);color:var(--orange)}
+
+    /* streak chip */
+    .streak-chip{display:flex;align-items:center;gap:.3rem;font-size:.7rem;font-weight:500;color:var(--orange);background:var(--orange-l);border:1px solid var(--orange-d);padding:.2rem .6rem;border-radius:100px;white-space:nowrap}
+
+    .topbar-right{display:flex;align-items:center;gap:.5rem}
+    .theme-btn{width:32px;height:32px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:border-color .2s,background .3s;padding:0;flex-shrink:0}
+    .theme-btn:hover{border-color:var(--blue)}
+    .theme-btn .icon-moon{display:block}
+    .theme-btn .icon-sun{display:none}
+    [data-theme=dark] .theme-btn .icon-moon{display:none}
+    [data-theme=dark] .theme-btn .icon-sun{display:block}
+
+    /* EMERGENCY PAUSE BUTTON */
+    .pause-btn{display:flex;align-items:center;gap:.35rem;padding:.35rem .75rem;background:rgba(127,29,29,.07);border:1.5px solid #DC2626;border-radius:7px;color:#B91C1C;font-family:'Inter',sans-serif;font-size:.68rem;font-weight:700;cursor:pointer;transition:all .15s;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;opacity:.65}
+    .pause-btn:hover{opacity:1;background:#FEF2F2;box-shadow:0 0 0 3px rgba(220,38,38,.15)}
+    .pause-btn.active{opacity:1;background:#FEF2F2;border-color:var(--red);color:var(--red);animation:pausePulse 1.5s ease-in-out infinite}
+    @keyframes pausePulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.3)}50%{box-shadow:0 0 0 4px rgba(220,38,38,.1)}}
+    .pause-btn .p-icon{font-size:.75rem}
+
+    .stop-btn-top{padding:.35rem .9rem;background:none;border:1px solid var(--border);border-radius:7px;color:var(--t3);font-family:'Inter',sans-serif;font-size:.72rem;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap}
+    .stop-btn-top:hover{border-color:var(--red);color:var(--red);background:var(--red-l)}
+
+    /* ── LAYOUT ── */
+    .layout{display:grid;grid-template-columns:280px 1fr 300px;height:100vh;padding-top:52px}
+
+    /* ── SIDE PANELS ── */
+    .panel{display:flex;flex-direction:column;padding:1.25rem;border-right:1px solid var(--border);background:var(--surface);overflow:hidden;transition:background .3s,border-color .3s}
+    .panel.right-panel{border-right:none;border-left:1px solid var(--border);padding:0}
+    .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem;flex-shrink:0}
+    .panel-title{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--t2)}
+    .count-chip{font-size:.62rem;font-weight:500;color:var(--t3);background:var(--surface2);padding:.15rem .5rem;border-radius:100px;transition:background .2s,color .2s}
+    .count-chip.has{background:var(--blue-l);color:var(--blue-t)}
+    .list-area{flex:1;overflow-y:auto;overflow-x:hidden;margin-bottom:.75rem;min-height:0;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+    .empty-msg{font-size:.73rem;color:var(--t3);text-align:center;padding:2.5rem 0;line-height:1.7}
+    .note-item,.todo-item{display:flex;align-items:flex-start;gap:.55rem;padding:.45rem 0;border-bottom:1px solid var(--border);animation:itemIn .2s ease}
+    .todo-item{align-items:center}
+    @keyframes itemIn{from{opacity:0;transform:translateX(6px)}to{opacity:1;transform:translateX(0)}}
+    .note-dot{width:5px;height:5px;border-radius:50%;background:var(--blue);margin-top:.5em;flex-shrink:0}
+    .note-txt,.todo-txt{flex:1;font-size:.8rem;color:var(--text);line-height:1.5;word-break:break-word}
+    .todo-txt{cursor:pointer;transition:all .15s}
+    .todo-txt.done{text-decoration:line-through;color:var(--t3)}
+    .check-box{width:15px;height:15px;border:1.5px solid var(--border);border-radius:4px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;background:var(--surface)}
+    .check-box:hover{border-color:var(--blue)}
+    .check-box.done{background:var(--green);border-color:var(--green)}
+    .check-box.done::after{content:'';width:7px;height:4px;border-left:1.5px solid #fff;border-bottom:1.5px solid #fff;transform:rotate(-45deg) translate(1px,-1px);display:block}
+    .todo-progress{height:2px;background:var(--border);border-radius:1px;margin-bottom:.75rem;flex-shrink:0}
+    .todo-progress-fill{height:100%;background:var(--green);border-radius:1px;transition:width .3s ease}
+    .del-btn{background:none;border:none;color:var(--t3);cursor:pointer;font-size:.7rem;padding:0 .15rem;flex-shrink:0;transition:color .15s;line-height:1}
+    .del-btn:hover{color:var(--red)}
+    .input-row{display:flex;gap:.35rem;flex-shrink:0}
+    .item-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'Inter',sans-serif;font-size:.77rem;padding:.45rem .65rem;outline:none;transition:border-color .15s,box-shadow .15s}
+    .item-input:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(37,99,235,.08)}
+    .item-input::placeholder{color:var(--t3)}
+    .add-btn{background:var(--blue-l);border:1px solid var(--blue-d);border-radius:7px;color:var(--blue-t);font-size:1rem;font-weight:600;padding:.45rem .6rem;cursor:pointer;transition:all .15s;line-height:1}
+    .add-btn:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
+
+    /* ── RIGHT TABS ── */
+    .tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+    .tab-btn{flex:1;padding:.65rem .4rem;font-size:.68rem;font-weight:500;color:var(--t3);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+    .tab-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
+    .tab-content{display:none;flex:1;flex-direction:column;padding:1.25rem;min-height:0;overflow:hidden}
+    .tab-content.active{display:flex}
+
+    /* log */
+    .log-total-block{flex-shrink:0;padding:.65rem .9rem;background:var(--surface2);border-radius:8px;margin-bottom:.75rem;display:flex;justify-content:space-between;align-items:center}
+    .log-total-label{font-size:.65rem;font-weight:500;color:var(--t3);text-transform:uppercase;letter-spacing:.1em}
+    .log-total-val{font-family:'JetBrains Mono',monospace;font-size:.95rem;font-weight:500;color:var(--blue)}
+    .log-entry{padding:.55rem 0;border-bottom:1px solid var(--border);animation:itemIn .2s ease}
+    .log-entry-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:.2rem;gap:.5rem}
+    .log-entry-time{font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--t3)}
+    .log-entry-dur{font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--blue-t);background:var(--blue-l);padding:.1rem .4rem;border-radius:4px;white-space:nowrap}
+    .log-entry-text{font-size:.78rem;color:var(--text);line-height:1.5}
+
+    /* settings tab */
+    .settings-group{margin-bottom:1.25rem;flex-shrink:0}
+    .settings-label{font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--t3);margin-bottom:.5rem}
+    .stepper{display:flex;align-items:center;gap:.5rem}
+    .step-btn{width:28px;height:28px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+    .step-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-l)}
+    .step-val{font-family:'JetBrains Mono',monospace;font-size:.95rem;font-weight:500;color:var(--text);min-width:40px;text-align:center}
+    .step-unit{font-size:.7rem;color:var(--t3)}
+    .apply-btn{width:100%;padding:.6rem;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:.78rem;font-weight:500;cursor:pointer;transition:opacity .15s;margin-top:.75rem}
+    .apply-btn:hover{opacity:.85}
+    .apply-note{font-size:.68rem;color:var(--t3);margin-top:.5rem;line-height:1.5}
+    .toggle-row{display:flex;align-items:center;gap:.5rem;margin-top:.5rem}
+    .toggle-row input[type="checkbox"]{width:14px;height:14px}
+    .toggle-label{font-size:.75rem;color:var(--t2)}
+
+    /* goal */
+    .goal-block{background:var(--surface2);border-radius:10px;padding:.875rem;flex-shrink:0;margin-bottom:.75rem}
+    .goal-title{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--t2);margin-bottom:.6rem}
+    .goal-progress{height:4px;background:var(--border);border-radius:2px;margin-bottom:.4rem;overflow:hidden}
+    .goal-progress-fill{height:100%;background:var(--blue);border-radius:2px;transition:width .5s ease}
+    .goal-progress-fill.done{background:var(--green)}
+    .goal-meta{display:flex;justify-content:space-between;font-size:.65rem;color:var(--t3);font-family:'JetBrains Mono',monospace}
+
+    /* motivation */
+    .motivation-list{flex:1;overflow-y:auto;min-height:0;margin-bottom:.75rem}
+    .motivation-card{border:1px solid var(--border);border-radius:10px;padding:.75rem .9rem;margin-bottom:.6rem;background:var(--surface);animation:itemIn .2s ease}
+    .motivation-title{font-size:.8rem;font-weight:600;margin-bottom:.25rem;color:var(--text)}
+    .motivation-text{font-size:.78rem;color:var(--t2);margin-bottom:.45rem;white-space:pre-wrap}
+    .motivation-media{border-radius:8px;overflow:hidden;margin-bottom:.35rem;cursor:pointer;position:relative}
+    .motivation-media img,.motivation-media video{display:block;width:100%;height:auto}
+    .motivation-media.video::after{content:'▶';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:2rem;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,0.6);pointer-events:none}
+    .motivation-meta{font-size:.65rem;color:var(--t3)}
+    .motivation-form label{display:block;font-size:.72rem;font-weight:500;color:var(--t2);margin-bottom:.25rem}
+    .motivation-form input,.motivation-form textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.78rem;padding:.45rem .6rem;margin-bottom:.45rem;outline:none}
+    .motivation-form textarea{resize:vertical;min-height:60px}
+    .motivation-form input:focus,.motivation-form textarea:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(37,99,235,.08)}
+    .motivation-form small{display:block;font-size:.65rem;color:var(--t3);margin-bottom:.5rem}
+    .motivation-add-btn{width:100%;padding:.55rem;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:.78rem;font-weight:500;cursor:pointer;transition:opacity .15s}
+    .motivation-add-btn:hover{opacity:.85}
+
+    /* ── CENTER ── */
+    .center{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;background:var(--bg);overflow:hidden;transition:background .3s;position:relative}
+
+    .fin-banner{display:none;width:100%;max-width:420px;background:var(--orange-l);border:1px solid var(--orange-d);border-radius:12px;padding:1.1rem 1.25rem;margin-bottom:2rem;flex-shrink:0;animation:fadeDown .4s ease}
+    .fin-banner.show{display:block}
+    @keyframes fadeDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+    .fin-banner-title{font-size:.9rem;font-weight:600;color:var(--orange);margin-bottom:.25rem}
+    .fin-banner-sub{font-size:.76rem;color:var(--t2);margin-bottom:.875rem}
+    .fin-new-btn{display:inline-block;padding:.5rem 1rem;background:var(--orange);color:#fff;font-size:.77rem;font-weight:500;text-decoration:none;border-radius:7px;transition:opacity .15s}
+    .fin-new-btn:hover{opacity:.85}
+
+    /* PAUSE OVERLAY inside center */
+    .pause-overlay{display:none;position:absolute;inset:0;background:rgba(15,17,23,.88);z-index:5;flex-direction:column;align-items:center;justify-content:center;gap:1rem;text-align:center}
+    .pause-overlay.show{display:flex}
+    .pause-big{font-size:3rem;filter:grayscale(1) brightness(2)}
+    .pause-title{font-size:1.5rem;font-weight:700;color:#F1F5F9;letter-spacing:-.5px}
+    .pause-sub{font-size:.85rem;color:var(--t3);max-width:280px;line-height:1.6}
+    .pause-resume{padding:.75rem 2rem;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:.875rem;font-weight:600;cursor:pointer;transition:opacity .15s}
+    .pause-resume:hover{opacity:.85}
+
+    .timer-hero{text-align:center;margin-bottom:2rem;position:relative;z-index:1}
+    .timer-label{font-size:.68rem;font-weight:500;color:var(--t3);text-transform:uppercase;letter-spacing:.15em;margin-bottom:.75rem}
+    .timer-main{font-family:'JetBrains Mono',monospace;font-size:clamp(3.5rem,7vw,6.5rem);font-weight:200;color:var(--text);line-height:1;letter-spacing:-3px;transition:color .5s}
+    .timer-main.work{color:var(--blue)}
+    .timer-main.chill{color:var(--green)}
+    .timer-main.paused{color:#D97706}
+
+    /* TIMELINE */
+    .timer-progress-wrap{display:inline-block;margin:.75rem auto 0;position:relative;z-index:1}
+    .timeline-track{position:relative;height:4px;background:var(--border);border-radius:999px;overflow:visible;display:flex}
+    .timeline-seg{height:100%;flex-shrink:0}
+    .timeline-seg.work{background:rgba(220,38,38,0.7);}
+    .timeline-seg.break{background:rgba(22,163,74,0.7);}
+    .timeline-person{position:absolute;top:50%;width:22px;height:22px;border-radius:999px;background:var(--surface);border:2px solid var(--blue);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--blue);transform:translate(-50%,-50%);box-shadow:0 4px 10px rgba(37,99,235,0.25);transition:left 0.6s linear, border-color .3s, color .3s}
+    .timeline-person.chill{border-color:var(--green);color:var(--green)}
+
+    .cards-row{display:flex;gap:.75rem;width:100%;max-width:420px;position:relative;z-index:1;margin-bottom:1.25rem}
+    .info-card{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.75rem 1rem;transition:background .3s,border-color .4s}
+    .info-card.work-card{border-color:var(--blue-d);background:var(--blue-l)}
+    .info-card.chill-card{border-color:var(--green-d);background:var(--green-l)}
+    .info-card-label{font-size:.62rem;font-weight:500;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.25rem;transition:color .4s}
+    .info-card.work-card .info-card-label{color:var(--blue-t)}
+    .info-card.chill-card .info-card-label{color:var(--green)}
+    .info-card-val{font-family:'JetBrains Mono',monospace;font-size:.9rem;font-weight:400;color:var(--text);transition:color .4s}
+    .info-card.work-card .info-card-val{color:var(--blue-t)}
+    .info-card.chill-card .info-card-val{color:var(--green)}
+    /* RIGHT card — "До перерыва" — bigger */
+    /* stacked time display */
+    .time-stack{display:flex;flex-direction:column;gap:.05rem}
+    .time-stack-min{font-family:'JetBrains Mono',monospace;font-size:2rem;font-weight:300;line-height:1;letter-spacing:-1px}
+    .time-stack-sec{font-family:'JetBrains Mono',monospace;font-size:2rem;font-weight:300;line-height:1.1;letter-spacing:-1px;white-space:nowrap}
+    .info-card.work-card .time-stack-min,.info-card.work-card .time-stack-sec{color:var(--blue-t)}
+    .info-card.chill-card .time-stack-min,.info-card.chill-card .time-stack-sec{color:var(--green)}
+
+    .center-controls{display:flex;flex-direction:column;align-items:center;gap:.6rem;width:100%;max-width:420px;position:relative;z-index:1}
+    .lofi-row{display:flex;gap:.5rem;width:100%}
+    .lofi-btn{flex:1;display:flex;align-items:center;gap:.6rem;padding:.65rem .9rem;background:var(--surface);border:1px solid var(--border);border-radius:10px;cursor:pointer;text-align:left;transition:all .15s}
+    .lofi-btn:hover{border-color:var(--blue-d);background:var(--blue-l)}
+    .lofi-icon{font-size:.95rem;flex-shrink:0}
+    .lofi-text .lofi-title{font-size:.75rem;font-weight:500;color:var(--text)}
+    .lofi-text .lofi-sub{font-size:.62rem;color:var(--t3)}
+    .live-badge{display:flex;align-items:center;gap:.3rem;font-size:.58rem;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:.08em;flex-shrink:0}
+    .live-dot{width:5px;height:5px;border-radius:50%;background:var(--red);animation:blink 1.2s ease-in-out infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+    /* Lofi iframe */
+    .lofi-frame-wrap{width:100%;max-width:420px;position:relative;z-index:1;border-radius:10px;overflow:hidden;border:1px solid var(--border);display:none}
+    .lofi-frame-wrap iframe{width:100%;height:180px;border:none;display:block}
+
+    .bottom-row{display:flex;gap:.75rem;width:100%;justify-content:center}
+    .reset-btn{background:none;border:none;font-size:.67rem;color:var(--t3);cursor:pointer;text-decoration:underline;text-underline-offset:2px;transition:color .15s}
+    .reset-btn:hover{color:var(--red)}
+
+    /* ── LOG MODAL ── */
+    .modal-overlay{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);animation:bgIn .2s ease}
+    @keyframes bgIn{from{opacity:0}to{opacity:1}}
+    .modal-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2rem;width:100%;max-width:440px;margin:1rem;animation:boxIn .25s cubic-bezier(.34,1.56,.64,1)}
+    @keyframes boxIn{from{opacity:0;transform:scale(.9) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+    .modal-emoji{font-size:2rem;margin-bottom:.75rem}
+    .modal-title{font-size:1.1rem;font-weight:600;margin-bottom:.25rem}
+    .modal-sub{font-size:.8rem;color:var(--t3);margin-bottom:1.25rem}
+    .modal-dur{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--blue-t);background:var(--blue-l);border:1px solid var(--blue-d);padding:.2rem .6rem;border-radius:6px;margin-bottom:1.25rem}
+    .modal-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Inter',sans-serif;font-size:.875rem;padding:.75rem 1rem;outline:none;resize:none;height:80px;transition:border-color .15s,box-shadow .15s;margin-bottom:1rem}
+    .modal-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.08)}
+    .modal-input::placeholder{color:var(--t3)}
+    .modal-btns{display:flex;gap:.5rem;justify-content:flex-end}
+    .modal-skip{padding:.6rem 1.1rem;background:none;border:1px solid var(--border);border-radius:8px;color:var(--t3);font-size:.8rem;font-weight:500;cursor:pointer;transition:all .15s}
+    .modal-skip:hover{border-color:var(--t3);color:var(--text)}
+    .modal-save{padding:.6rem 1.5rem;background:var(--blue);border:none;border-radius:8px;color:#fff;font-size:.8rem;font-weight:500;cursor:pointer;transition:opacity .15s}
+    .modal-save:hover{opacity:.85}
+
+    /* ── CELEBRATION ── */
+    #confettiCanvas{position:fixed;inset:0;z-index:101;pointer-events:none;display:none}
+
+    .celebration{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.7);animation:bgIn .3s ease}
+    .cele-card{background:var(--surface);border-radius:24px;padding:2.25rem;text-align:center;max-width:460px;width:calc(100% - 2rem);animation:celeIn .5s cubic-bezier(.34,1.56,.64,1);border:1px solid var(--border);max-height:90vh;overflow-y:auto}
+    @keyframes celeIn{from{opacity:0;transform:scale(.7) translateY(30px)}to{opacity:1;transform:scale(1) translateY(0)}}
+    .cele-emoji{font-size:3.5rem;margin-bottom:.75rem;animation:pop .6s cubic-bezier(.34,1.56,.64,1) .2s both;display:block}
+    @keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+    .cele-title{font-size:1.9rem;font-weight:700;color:var(--text);letter-spacing:-.5px;margin-bottom:.2rem}
+    .cele-subtitle{font-size:.88rem;color:var(--t3);margin-bottom:1.25rem}
+
+    .meme-block{background:var(--surface2);border-radius:12px;padding:1rem 1.25rem;margin-bottom:1.25rem;font-size:.85rem;color:var(--text);line-height:1.7;text-align:left}
+    .meme-ascii{font-family:'JetBrains Mono',monospace;font-size:.65rem;line-height:1.4;color:var(--t2);margin-top:.75rem;white-space:pre}
+
+    .cele-stats{background:var(--surface2);border-radius:12px;padding:.875rem 1rem;margin-bottom:1rem;text-align:left}
+    .cele-stat-row{display:flex;justify-content:space-between;align-items:center;padding:.25rem 0}
+    .cele-stat-row+.cele-stat-row{border-top:1px solid var(--border)}
+    .cele-stat-label{font-size:.77rem;color:var(--t3)}
+    .cele-stat-val{font-family:'JetBrains Mono',monospace;font-size:.8rem;font-weight:500;color:var(--text)}
+
+    .cele-log{text-align:left;margin-bottom:1rem}
+    .cele-log-title{font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--t3);margin-bottom:.5rem}
+    .cele-log-item{font-size:.78rem;color:var(--text);padding:.25rem 0;border-bottom:1px solid var(--border);display:flex;gap:.5rem}
+    .cele-log-dot{width:5px;height:5px;border-radius:50%;background:var(--blue);flex-shrink:0;margin-top:.45em}
+
+    .cele-close{padding:.75rem 2rem;background:var(--blue);color:#fff;border:none;border-radius:10px;font-size:.875rem;font-weight:500;cursor:pointer;transition:opacity .15s;margin-top:.25rem}
+    .cele-close:hover{opacity:.85}
+
+    ::-webkit-scrollbar{width:3px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+  </style>
+</head>
+<body>
+
+<canvas id="confettiCanvas"></canvas>
+
+<!-- LOG MODAL -->
+<div class="modal-overlay" id="logModal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-emoji">✍️</div>
+    <div class="modal-title">Блок работы завершён!</div>
+    <div class="modal-sub">Что ты сделал за этот блок?</div>
+    <div class="modal-dur" id="modalDur">25 мин</div>
+    <textarea class="modal-input" id="logInput" placeholder="Написал код, созвонился с командой..."></textarea>
+    <div class="modal-btns">
+      <button class="modal-skip" onclick="saveLog(true)">Пропустить</button>
+      <button class="modal-save" onclick="saveLog(false)">Сохранить →</button>
+    </div>
+  </div>
+</div>
+
+<!-- LONG BREAK STRETCH MODAL -->
+<div class="modal-overlay" id="stretchModal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-emoji">🧘‍♀️</div>
+    <div class="modal-title">Длинный перерыв — пора размяться</div>
+    <div class="modal-sub">Сделай пару упражнений для спины, чтобы разгрузить позвоночник и вернуться к работе с лёгкостью.</div>
+    <div style="margin-bottom:1rem;border-radius:12px;overflow:hidden">
+      <video id="stretchVideo" controls style="width:100%;height:auto;display:block;background:#000"
+             src="{{ url_for('static', filename='ТВОЯ РАСТЯЖКА ДЛЯ СПИНЫ Здоровая и гибкая спина Упражнения для г.mp4') }}">
+        Ваш браузер не поддерживает видео.
+      </video>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-skip" onclick="closeStretchModal()">Сделаю позже</button>
+      <button class="modal-save" onclick="closeStretchModal()">Спасибо, продолжаю</button>
+    </div>
+  </div>
+</div>
+
+<!-- CELEBRATION -->
+<div class="celebration" id="celebration" style="display:none">
+  <div class="cele-card">
+    <span class="cele-emoji" id="celeEmoji">🔥</span>
+    <div class="cele-title"    id="celeTitle">Ты красавчик!</div>
+    <div class="cele-subtitle" id="celeSubtitle">Отработан 1 час</div>
+    <div class="meme-block"    id="memeBlock"></div>
+    <div class="cele-stats"    id="celeStats"></div>
+    <div class="cele-log"      id="celeLog" style="display:none">
+      <div class="cele-log-title">Что сделал</div>
+      <div id="celeLogItems"></div>
+    </div>
+    <button class="cele-close" onclick="closeCelebration()">Продолжаем 💪</button>
+  </div>
+</div>
+
+<!-- MEDIA VIEWER (full-screen for motivation) -->
+<div class="modal-overlay" id="mediaViewer" style="display:none;z-index:120">
+  <div class="modal-box" style="max-width:720px;padding:1rem 1rem 1.25rem">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:.5rem">
+      <button class="del-btn" onclick="closeMediaViewer()">Закрыть ✕</button>
+    </div>
+    <div id="mediaViewerBody" style="max-height:70vh;overflow:auto">
+      <img id="mediaViewerImg" src="" alt="" style="display:none;width:100%;height:auto;border-radius:12px">
+      <video id="mediaViewerVideo" src="" controls style="display:none;width:100%;height:auto;border-radius:12px;background:#000"></video>
+    </div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="brand">Smart Timer</div>
+  <div class="topbar-center">
+    <div class="mode-pill" id="modePill">ожидание</div>
+    <div class="streak-chip" id="streakChip" style="display:none">🔥 <span id="streakVal">0</span></div>
+  </div>
+  <div class="topbar-right">
+    <button class="pause-btn" id="pauseBtn" onclick="togglePause()">
+      <span class="p-icon">⚠</span> Экстренная пауза
+    </button>
+    <button class="stop-btn-top" id="skipBreakBtn" onclick="skipBreak()" style="display:none">Пропустить перерыв</button>
+    <button class="theme-btn" onclick="toggleTheme()" aria-label="Тема">
+      <svg class="icon-moon" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M13.5 10.5A6 6 0 0 1 5.5 2.5a6 6 0 1 0 8 8z" stroke="#6B7280" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg class="icon-sun"  width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3" stroke="#94A3B8" stroke-width="1.25"/><line x1="8" y1="1" x2="8" y2="2.5" stroke="#94A3B8" stroke-width="1.25" stroke-linecap="round"/><line x1="8" y1="13.5" x2="8" y2="15" stroke="#94A3B8" stroke-width="1.25" stroke-linecap="round"/><line x1="1" y1="8" x2="2.5" y2="8" stroke="#94A3B8" stroke-width="1.25" stroke-linecap="round"/><line x1="13.5" y1="8" x2="15" y2="8" stroke="#94A3B8" stroke-width="1.25" stroke-linecap="round"/><line x1="2.93" y1="2.93" x2="3.99" y2="3.99" stroke="#94A3B8" stroke-width="1.25" stroke-linecap="round"/><line x1="12.01" y1="12.01" x2="13.07" y2="13.07" stroke="#94A3B8" stroke-width="1.25" stroke-linecap="round"/><line x1="13.07" y1="2.93" x2="12.01" y2="3.99" stroke="#94A3B8" stroke-width="1.25" stroke-linecap="round"/><line x1="3.99" y1="12.01" x2="2.93" y2="13.07" stroke="#94A3B8" stroke-width="1.25" stroke-linecap="round"/></svg>
+    </button>
+    <form action="/stop" method="POST" onsubmit="return confirm('Завершить работу?')" style="margin:0">
+      <button type="submit" class="stop-btn-top">Завершить</button>
+    </form>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- LEFT: NOTES -->
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">💡 Мысли на потом</div>
+      <div class="count-chip" id="noteChip">0</div>
+    </div>
+    <div class="list-area" id="noteList">
+      <div class="empty-msg">Запиши мысль,<br>чтобы не отвлекаться</div>
+    </div>
+    <div class="input-row">
+      <input class="item-input" id="noteInput" placeholder="Внезапная мысль..." maxlength="200" onkeydown="if(event.key==='Enter')addNote()">
+      <button class="add-btn" onclick="addNote()">+</button>
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div class="center" id="centerPanel">
+
+    <!-- Pause overlay -->
+    <div class="pause-overlay" id="pauseOverlay">
+      <div class="pause-big">⏸</div>
+      <div class="pause-title">Пауза</div>
+      <div class="pause-sub">Счётчик заморожен. Возвращайся скорее — ты на полпути!</div>
+      <button class="pause-resume" onclick="togglePause()">▶ Продолжить работу</button>
+    </div>
+
+    <div class="fin-banner" id="finBanner">
+      <div class="fin-banner-title">🎉 Работа завершена!</div>
+      <div class="fin-banner-sub" id="finBannerSub">Таймер в режиме ожидания.</div>
+      <a href="/index" class="fin-new-btn">Начать заново →</a>
+    </div>
+
+      <div class="timer-hero">
+      <div class="timer-label" id="timerLabel">статус</div>
+      <div class="timer-main"  id="timerMain">—</div>
+      <div class="timer-progress-wrap">
+        <div class="timeline-track" id="timelineTrack">
+          <div class="timeline-person" id="timelinePerson">🧍</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cards-row">
+      <div class="info-card" id="totalCard">
+        <div class="info-card-label">Отработано сегодня</div>
+        <div class="time-stack" id="totalStack">
+          <div class="time-stack-min" id="totalH">0 ч</div>
+          <div class="time-stack-min" id="totalM">0 мин</div>
+          <div class="time-stack-sec" id="totalS">0 сек</div>
+        </div>
+      </div>
+      <div class="info-card" id="subCard">
+        <div class="info-card-label" id="subLabel">До перерыва</div>
+        <div class="time-stack" id="subStack"><div class="time-stack-min" id="subMin">—</div><div class="time-stack-sec" id="subSec"></div></div>
+      </div>
+    </div>
+
+    <!-- Lofi embed attempt -->
+    <div class="lofi-frame-wrap" id="lofiFrameWrap">
+      <iframe id="lofiIframe"
+        src="about:blank"
+        allow="autoplay; encrypted-media"
+        allowfullscreen>
+      </iframe>
+    </div>
+
+    <div class="center-controls">
+      <div class="lofi-row">
+        <button class="lofi-btn" onclick="toggleLofi()">
+          <span class="lofi-icon">🎵</span>
+          <span class="lofi-text">
+            <div class="lofi-title" id="lofiTitle">Включить Lofi</div>
+            <div class="lofi-sub">Музыка для фокуса</div>
+          </span>
+          <span class="live-badge"><span class="live-dot"></span>LIVE</span>
+        </button>
+      </div>
+      <div class="bottom-row">
+        <button class="reset-btn" onclick="resetCounter()">↺ Сбросить счётчик</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="panel right-panel">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('todos')">✅ Задачи</button>
+      <button class="tab-btn"        onclick="switchTab('log')">📋 Итоги</button>
+      <button class="tab-btn"        onclick="switchTab('history')">📚 История</button>
+      <button class="tab-btn"        onclick="switchTab('motivation')">✨ Мотивация</button>
+      <button class="tab-btn"        onclick="switchTab('settings')">⚙️ Настройки</button>
+    </div>
+
+    <!-- TODOS -->
+    <div class="tab-content active" id="tab-todos">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:.875rem;flex-shrink:0">
+        <div class="count-chip" id="todoChip">0/0</div>
+      </div>
+      <div class="todo-progress"><div class="todo-progress-fill" id="todoProg" style="width:0%"></div></div>
+      <div class="list-area" id="todoList">
+        <div class="empty-msg">Добавь задачи<br>на сегодня</div>
+      </div>
+      <div class="input-row">
+        <input class="item-input" id="todoInput" placeholder="Задача..." maxlength="200" onkeydown="if(event.key==='Enter')addTodo()">
+        <button class="add-btn" onclick="addTodo()">+</button>
+      </div>
+    </div>
+
+    <!-- LOG TODAY -->
+    <div class="tab-content" id="tab-log">
+      <div class="log-total-block">
+        <span class="log-total-label">Сегодня</span>
+        <span class="log-total-val" id="logTotalVal">0 сек</span>
+      </div>
+
+      <!-- Goal block -->
+      <div class="goal-block" id="goalBlock">
+        <div class="goal-title">Дневная цель</div>
+        <div class="goal-progress"><div class="goal-progress-fill" id="goalProg" style="width:0%"></div></div>
+        <div class="goal-meta">
+          <span id="goalCurrent">0</span>
+          <span id="goalTarget">цель не задана</span>
+        </div>
+      </div>
+
+      <div class="list-area" id="logListToday">
+        <div class="empty-msg">Здесь появятся<br>итоги каждого блока за сегодня</div>
+      </div>
+
+      <!-- Ручное добавление времени -->
+      <div style="margin-top:.75rem">
+        <div class="settings-label">Ручное добавление времени</div>
+        <div class="motivation-form">
+          <label for="manualTopic">Тема / что делал</label>
+          <input id="manualTopic" placeholder="Читал книгу, готовился к встрече..." maxlength="200">
+          <label>Время блока</label>
+          <div style="display:flex;gap:.4rem;margin-bottom:.4rem">
+            <input type="time" id="manualStart" style="flex:1">
+            <input type="time" id="manualEnd" style="flex:1">
+          </div>
+          <label style="display:flex;align-items:center;gap:.35rem;margin-bottom:.5rem">
+            <input type="checkbox" id="manualAddTotal" checked style="width:14px;height:14px">
+            <span class="toggle-label">Прибавить к общему времени за сегодня</span>
+          </label>
+          <button class="motivation-add-btn" type="button" onclick="manualAdd()">Добавить</button>
+          <small>Используй это, если работал без таймера и хочешь досчитать время.</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="tab-content" id="tab-history">
+      <div class="list-area" id="logListHistory">
+        <div class="empty-msg">История появится здесь,<br>когда накопятся прошлые дни</div>
+      </div>
+    </div>
+
+    <!-- MOTIVATION -->
+    <div class="tab-content" id="tab-motivation">
+      <div class="settings-label">Мотивация</div>
+      <div class="motivation-list" id="motivationList">
+        <div class="empty-msg">Добавь одну-две картинки или цитаты,<br>которые напоминают, зачем ты работаешь.</div>
+      </div>
+      <div class="motivation-form">
+        <label for="motFile">Фото или видео</label>
+        <input id="motFile" type="file" accept="image/*,video/*">
+        <label for="motText">Текст</label>
+        <textarea id="motText"></textarea>
+        <small>Загрузи файл, он сохранится локально в приложении и будет доступен только тебе.</small>
+        <button class="motivation-add-btn" type="button" onclick="addMotivation()">Добавить мотивацию</button>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="tab-content" id="tab-settings">
+      <div style="flex:1;overflow-y:auto;min-height:0">
+
+        <div class="settings-group">
+          <div class="settings-label">Работа (мин)</div>
+          <div class="stepper">
+            <button class="step-btn" onclick="stepChange('work',-5)">−</button>
+            <span class="step-val" id="sWork">25</span>
+            <span class="step-unit">мин</span>
+            <button class="step-btn" onclick="stepChange('work',5)">+</button>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-label">Короткий перерыв (мин)</div>
+          <div class="stepper">
+            <button class="step-btn" onclick="stepChange('short',-1)">−</button>
+            <span class="step-val" id="sShort">5</span>
+            <span class="step-unit">мин</span>
+            <button class="step-btn" onclick="stepChange('short',1)">+</button>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-label">Длинный перерыв (мин)</div>
+          <div class="stepper">
+            <button class="step-btn" onclick="stepChange('long',-5)">−</button>
+            <span class="step-val" id="sLong">15</span>
+            <span class="step-unit">мин</span>
+            <button class="step-btn" onclick="stepChange('long',5)">+</button>
+          </div>
+          <div class="toggle-row">
+            <input type="checkbox" id="stretchToggle" onchange="toggleStretchSetting()">
+            <span class="toggle-label">Показывать напоминание о растяжке на длинном перерыве</span>
+          </div>
+        </div>
+
+        <button class="apply-btn" onclick="applySettings()">Применить →</button>
+        <p class="apply-note">Текущий блок не прерывается. Следующий период работы/отдыха уже будет с новыми настройками.</p>
+
+        <div style="margin-top:1.5rem">
+          <div class="settings-label">Дневная цель</div>
+          <div class="stepper" style="margin-top:.5rem">
+            <button class="step-btn" onclick="stepGoal(-30)">−</button>
+            <span class="step-val" id="sGoalH">2</span>
+            <span class="step-unit">ч</span>
+            <button class="step-btn" onclick="stepGoal(30)">+</button>
+          </div>
+          <button class="apply-btn" onclick="applyGoal()">Сохранить цель</button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── THEME ──
+const saved = localStorage.getItem('st_theme') || 'light';
+document.documentElement.setAttribute('data-theme', saved);
+function toggleTheme() {
+  const n = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('st_theme', n);
+  document.documentElement.setAttribute('data-theme', n);
+}
+
+// ── TABS ──
+function switchTab(n) {
+  const order = ['todos','log','history','motivation','settings'];
+  order.forEach((t,i) => {
+    const btn = document.querySelectorAll('.tab-btn')[i];
+    if (btn) btn.classList.toggle('active', t === n);
+    const pane = document.getElementById('tab-'+t);
+    if (pane) pane.classList.toggle('active', t === n);
+  });
+}
+
+// ── DATA ──
+let notes = JSON.parse(localStorage.getItem('st_notes') || '[]');
+let todos = JSON.parse(localStorage.getItem('st_todos') || '[]');
+let workLog = JSON.parse(localStorage.getItem('st_worklog') || '[]');
+let motivation = JSON.parse(localStorage.getItem('st_motivation') || '[]');
+let finishedShown = false;
+let lastMode = 'waiting';
+let blockStartTotal = 0;
+let pendingLogDurSec = 0;
+let pendingEndTs = null;
+let longBreakModalShownForCurrentBreak = false;
+let stretchEnabled = (localStorage.getItem('st_stretch_enabled') ?? '1') === '1';
+const MILESTONES = [3600, 7200, 10800, 14400, 18000];
+let passedMilestones = JSON.parse(localStorage.getItem('st_milestones') || '[]');
+let lofiOn = false;
+let goalMin = parseInt(localStorage.getItem('st_goal_min') || '120');
+let timerWidth = 0;
+let historyOpenDate = localStorage.getItem('st_hist_open_date') || '';
+
+// Предзадать ширину статус-бара под строку "00 мин 00 сек"
+function initTimerWidth() {
+  if (typeof document === 'undefined') return;
+  const probe = document.createElement('div');
+  probe.className = 'timer-main work';
+  probe.style.position = 'absolute';
+  probe.style.visibility = 'hidden';
+  probe.style.pointerEvents = 'none';
+  probe.textContent = '00 мин 00 сек';
+  document.body.appendChild(probe);
+  const w = probe.offsetWidth;
+  if (w > 0) timerWidth = w;
+  document.body.removeChild(probe);
+}
+
+// ── STEPPER STATE ──
+let sWork = 25, sShort = 5, sLong = 15;
+function stepChange(k, d) {
+  if (k==='work')  sWork  = Math.max(5,  sWork  + d);
+  if (k==='short') sShort = Math.max(1,  sShort + d);
+  if (k==='long')  sLong  = Math.max(5,  sLong  + d);
+  document.getElementById('sWork').textContent  = sWork;
+  document.getElementById('sShort').textContent = sShort;
+  document.getElementById('sLong').textContent  = sLong;
+}
+
+function applySettings() {
+  fetch('/update_settings', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ work: sWork, short: sShort, long: sLong })
+  }).then(() => {
+    const btn = document.querySelector('.apply-btn');
+    btn.textContent = '✓ Применено!';
+    setTimeout(() => btn.textContent = 'Применить →', 2000);
+  });
+}
+
+let sGoalH = goalMin / 60;
+function stepGoal(d) {
+  sGoalH = Math.max(.5, sGoalH + d/60);
+  document.getElementById('sGoalH').textContent = sGoalH % 1 === 0 ? sGoalH : sGoalH.toFixed(1);
+}
+function applyGoal() {
+  goalMin = Math.round(sGoalH * 60);
+  localStorage.setItem('st_goal_min', goalMin);
+  fetch('/set_goal', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ hours: Math.floor(goalMin/60), minutes: goalMin%60 })
+  }).then(() => {
+    const btns = document.querySelectorAll('.apply-btn');
+    btns[1].textContent = '✓ Цель сохранена!';
+    setTimeout(() => btns[1].textContent = 'Сохранить цель', 2000);
+  });
+}
+
+// ── PAUSE ──
+let pauseConfirmed = false;
+function togglePause() {
+  const isActive = document.getElementById('pauseBtn').classList.contains('active');
+  if (!isActive) {
+    // Включить паузу — просим подтверждение
+    const ok = confirm('⚠️ ЭКСТРЕННАЯ ПАУЗА\n\nТебе это действительно необходимо прямо сейчас?\nСчётчик остановится и стрик может прерваться.\n\nЭто только для форс-мажора — звонок, авария, срочное ЧП.\n\nТы точно не можешь подождать до перерыва?');
+    if (!ok) return;
+  }
+  fetch('/pause', { method: 'POST' }).then(r => r.json()).then(d => {
+    document.getElementById('pauseBtn').classList.toggle('active', d.paused);
+    document.getElementById('pauseOverlay').classList.toggle('show', d.paused);
+  });
+}
+
+// ── SKIP BREAK ──
+function skipBreak() {
+  fetch('/skip_break', { method: 'POST' }).then(() => {
+    // Кнопка спрячется автоматически, когда режим сменится на work
+  }).catch(()=>{});
+}
+
+// ── LOFI ──
+let lofiLoaded = false;
+function toggleLofi() {
+  lofiOn = !lofiOn;
+  const wrap = document.getElementById('lofiFrameWrap');
+  const title = document.getElementById('lofiTitle');
+  if (lofiOn) {
+    wrap.style.display = 'block';
+    if (!lofiLoaded) {
+      document.getElementById('lofiIframe').src =
+        'https://www.youtube-nocookie.com/embed/jfKfPfyJRdk?autoplay=1&origin=http://localhost:5000&rel=0';
+      lofiLoaded = true;
+    }
+    title.textContent = 'Выключить Lofi';
+  } else {
+    wrap.style.display = 'none';
+    title.textContent = 'Включить Lofi';
+  }
+}
+
+// ── UTILS ──
+function fmt(s) {
+  s = Math.floor(s);
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+  if (h>0) return `${h} ч ${m} мин ${sec} сек`;
+  if (m===0) return `${sec} сек`;
+  return `${m} мин ${sec} сек`;
+}
+function fmtShort(s) {
+  s = Math.floor(s);
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
+  if (h>0) return `${h}ч ${m}м`;
+  return `${m} мин`;
+}
+// Разбивает секунды на три строки: часы, минуты, секунды
+function fmtStack(s) {
+  s = Math.floor(s);
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+  return {
+    h: `${h} ч`,
+    m: `${m} мин`,
+    s: `${sec} сек`
+  };
+}
+// Разбивает строку формата "X мин Y сек" на min/sec части
+function splitTimeStr(str) {
+  if (!str || str === '—') return { min: '—', sec: '' };
+  const hm = str.match(/(\d+)\s*ч\s*(\d+)\s*мин\s*(\d+)\s*сек/);
+  if (hm) return { min: `${hm[1]} ч ${hm[2]} мин`, sec: `${hm[3]} сек` };
+  const ms = str.match(/(\d+)\s*мин\s*(\d+)\s*сек/);
+  if (ms) return { min: `${ms[1]} мин`, sec: `${ms[2]} сек` };
+  const mo = str.match(/(\d+)\s*мин/);
+  if (mo) return { min: `${mo[1]} мин`, sec: '' };
+  const so = str.match(/(\d+)\s*сек/);
+  if (so) return { min: '0 мин', sec: `${so[1]} сек` };
+  return { min: str, sec: '' };
+}
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function nowTime() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function todayStr() {
+  return new Date().toISOString().slice(0,10);
+}
+function yesterdayStr() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0,10);
+}
+function dayMonthLabel(dateStr) {
+  const [y,m,d] = dateStr.split('-').map(n=>parseInt(n,10));
+  if (!y || !m || !d) return dateStr;
+  const months = [
+    'января','февраля','марта','апреля','мая','июня',
+    'июля','августа','сентября','октября','ноября','декабря'
+  ];
+  return `${d} ${months[m-1] || ''}`.trim();
+}
+function relativeDateLabel(dateStr) {
+  const today = new Date();
+  const [y,m,d] = dateStr.split('-').map(n=>parseInt(n,10));
+  const that = new Date(y, m-1, d);
+  const msInDay = 24*60*60*1000;
+  const diff = Math.round((today.setHours(0,0,0,0) - that.setHours(0,0,0,0))/msInDay);
+  if (diff === 1) return 'Вчера';
+  if (diff === 2) return 'Позавчера';
+  if (diff > 2 && diff < 7) return `${diff} дней назад`;
+  return dateStr;
+}
+function historyGroupLabel(dateStr) {
+  const rel = relativeDateLabel(dateStr);
+  if (rel === 'Вчера' || rel === 'Позавчера') return rel;
+  return dayMonthLabel(dateStr);
+}
+
+// Переносим старые записи (без date) в историю
+function migrateWorkLogDates() {
+  const key = 'st_worklog_migrated_dates_v1';
+  if (localStorage.getItem(key) === '1') return;
+  if (!Array.isArray(workLog) || !workLog.length) {
+    localStorage.setItem(key, '1');
+    return;
+  }
+  const y = yesterdayStr();
+  let changed = false;
+  workLog.forEach(e => {
+    if (!e || typeof e !== 'object') return;
+    if (!e.date) {
+      e.date = y;
+      changed = true;
+    }
+  });
+  if (changed) localStorage.setItem('st_worklog', JSON.stringify(workLog));
+  localStorage.setItem(key, '1');
+}
+
+// Миграция мотивации: переносим title в text и убираем title
+function migrateMotivation() {
+  const key = 'st_motivation_migrated_v1';
+  if (localStorage.getItem(key) === '1') return;
+  if (!Array.isArray(motivation) || !motivation.length) {
+    localStorage.setItem(key, '1');
+    return;
+  }
+  let changed = false;
+  motivation.forEach(m => {
+    if (!m || typeof m !== 'object') return;
+    if (m.title && !m.text) {
+      m.text = String(m.title);
+      changed = true;
+    }
+    if (m.title) {
+      delete m.title;
+      changed = true;
+    }
+  });
+  if (changed) localStorage.setItem('st_motivation', JSON.stringify(motivation));
+  localStorage.setItem(key, '1');
+}
+
+function toggleHistoryDate(dateStr) {
+  historyOpenDate = (historyOpenDate === dateStr) ? '' : dateStr;
+  localStorage.setItem('st_hist_open_date', historyOpenDate);
+  renderLogHistory();
+}
+
+function delWorkLog(idx) {
+  if (!Number.isInteger(idx) || idx < 0 || idx >= workLog.length) return;
+  if (!confirm('Удалить этот блок из истории?')) return;
+  workLog.splice(idx, 1);
+  localStorage.setItem('st_worklog', JSON.stringify(workLog));
+  renderLogToday(true);
+  renderLogHistory();
+}
+
+// ── NOTES ──
+function renderNotes() {
+  const list = document.getElementById('noteList'), chip = document.getElementById('noteChip');
+  list.innerHTML = '';
+  if (!notes.length) { list.innerHTML = '<div class="empty-msg">Запиши мысль,<br>чтобы не отвлекаться</div>'; }
+  else notes.forEach((n,i) => {
+    const el = document.createElement('div'); el.className = 'note-item';
+    el.innerHTML = `<div class="note-dot"></div><div class="note-txt">${esc(n)}</div><button class="del-btn" onclick="delNote(${i})">✕</button>`;
+    list.appendChild(el);
+  });
+  chip.textContent = notes.length;
+  chip.className = 'count-chip' + (notes.length ? ' has' : '');
+  localStorage.setItem('st_notes', JSON.stringify(notes));
+}
+function addNote() { const i=document.getElementById('noteInput'),v=i.value.trim(); if(!v)return; notes.push(v); i.value=''; renderNotes(); document.getElementById('noteList').scrollTop=9999; }
+function delNote(i) { notes.splice(i,1); renderNotes(); }
+
+// ── TODOS ──
+function renderTodos() {
+  const list=document.getElementById('todoList'), chip=document.getElementById('todoChip'), prog=document.getElementById('todoProg');
+  list.innerHTML='';
+  if (!todos.length) { list.innerHTML='<div class="empty-msg">Добавь задачи<br>на сегодня</div>'; chip.textContent='0/0'; prog.style.width='0%'; }
+  else {
+    todos.forEach((t,i) => {
+      const el=document.createElement('div'); el.className='todo-item';
+      el.innerHTML=`<div class="check-box ${t.done?'done':''}" onclick="toggleTodo(${i})"></div><div class="todo-txt ${t.done?'done':''}" onclick="toggleTodo(${i})">${esc(t.text)}</div><button class="del-btn" onclick="delTodo(${i})">✕</button>`;
+      list.appendChild(el);
+    });
+    const done=todos.filter(t=>t.done).length;
+    chip.textContent=`${done}/${todos.length}`;
+    chip.className='count-chip'+(done?' has':'');
+    prog.style.width=Math.round((done/todos.length)*100)+'%';
+  }
+  localStorage.setItem('st_todos', JSON.stringify(todos));
+}
+function addTodo() { const i=document.getElementById('todoInput'),v=i.value.trim(); if(!v)return; todos.push({text:v,done:false}); i.value=''; renderTodos(); document.getElementById('todoList').scrollTop=9999; }
+function delTodo(i) { todos.splice(i,1); renderTodos(); }
+function toggleTodo(i) { todos[i].done=!todos[i].done; renderTodos(); }
+
+// ── WORK LOG ──
+let _lastLogLen = -1;
+function renderLogToday(force) {
+  const list = document.getElementById('logListToday');
+  if (!list) return;
+  if (!force && workLog.length === _lastLogLen) return;
+  _lastLogLen = workLog.length;
+  list.innerHTML = '';
+  if (!workLog.length) {
+    list.innerHTML = '<div class="empty-msg">Здесь появятся<br>итоги каждого блока за сегодня</div>';
+    return;
+  }
+  const today = todayStr();
+  const todays = [];
+  workLog.forEach((e, idx) => {
+    const d = (e && e.date) ? e.date : today;
+    if (d === today) todays.push({ e, idx });
+  });
+  if (!todays.length) {
+    list.innerHTML = '<div class="empty-msg">За сегодня ещё нет<br>ни одного блока</div>';
+    return;
+  }
+  [...todays].reverse().forEach(({e, idx}) => {
+    const range = e.start && e.end ? `с ${e.start} до ${e.end}` : (e.time ? `в ${e.time}` : '');
+    const el = document.createElement('div'); el.className = 'log-entry';
+    el.innerHTML =
+      `<div class="log-entry-top">`+
+        `<span class="log-entry-time">${esc(range)}</span>`+
+        `<span style="display:flex;gap:.4rem;align-items:center">`+
+          `<span class="log-entry-dur">${esc(e.dur||'')}</span>`+
+          `<button class="del-btn" onclick="delWorkLog(${idx})">✕</button>`+
+        `</span>`+
+      `</div>`+
+      `<div class="log-entry-text">${esc(e.text||'—')}</div>`;
+    list.appendChild(el);
+  });
+}
+
+function renderLogHistory() {
+  const list = document.getElementById('logListHistory');
+  if (!list) return;
+  list.innerHTML = '';
+  if (!workLog.length) {
+    list.innerHTML = '<div class="empty-msg">История появится здесь,<br>когда накопятся прошлые дни</div>';
+    return;
+  }
+  const today = todayStr();
+  const byDate = {};
+  workLog.forEach((e, idx) => {
+    const d = (e && e.date) ? e.date : today;
+    if (d === today) return;
+    (byDate[d] = byDate[d] || []).push({ e, idx });
+  });
+  const dates = Object.keys(byDate).sort().reverse();
+  if (!dates.length) {
+    list.innerHTML = '<div class="empty-msg">Пока есть только сегодняшние блоки</div>';
+    return;
+  }
+  dates.forEach(d => {
+    const head = document.createElement('div');
+    head.style.display = 'flex';
+    head.style.alignItems = 'center';
+    head.style.justifyContent = 'space-between';
+    head.style.gap = '.5rem';
+    head.style.margin = '0 0 .35rem 0';
+
+    const btn = document.createElement('button');
+    btn.className = 'stop-btn-top';
+    btn.type = 'button';
+    btn.style.flex = '1';
+    btn.style.display = 'flex';
+    btn.style.justifyContent = 'space-between';
+    btn.style.alignItems = 'center';
+    btn.style.gap = '.6rem';
+    btn.style.padding = '.45rem .75rem';
+    btn.style.borderRadius = '10px';
+    btn.onclick = () => toggleHistoryDate(d);
+
+    const label = historyGroupLabel(d);
+    const opened = historyOpenDate === d;
+    btn.innerHTML = `<span>${esc(label)}</span><span style="color:var(--t3);font-size:.72rem">${opened ? '▼' : '▶'} ${byDate[d].length}</span>`;
+    head.appendChild(btn);
+    list.appendChild(head);
+
+    if (!opened) return;
+    byDate[d].slice().reverse().forEach(({e, idx}) => {
+      const range = e.start && e.end ? `с ${e.start} до ${e.end}` : (e.time ? `в ${e.time}` : '');
+      const el = document.createElement('div'); el.className = 'log-entry';
+      el.innerHTML =
+        `<div class="log-entry-top">`+
+          `<span class="log-entry-time">${esc(range)}</span>`+
+          `<span style="display:flex;gap:.4rem;align-items:center">`+
+            `<span class="log-entry-dur">${esc(e.dur||'')}</span>`+
+            `<button class="del-btn" onclick="delWorkLog(${idx})">✕</button>`+
+          `</span>`+
+        `</div>`+
+        `<div class="log-entry-text">${esc(e.text||'—')}</div>`;
+      list.appendChild(el);
+    });
+  });
+}
+
+function showLogModal(durSec) {
+  pendingLogDurSec = durSec;
+  pendingEndTs = Date.now();
+  document.getElementById('modalDur').textContent = fmtShort(durSec);
+  document.getElementById('logInput').value = '';
+  document.getElementById('logModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('logInput').focus(), 100);
+}
+
+function saveLog(skip) {
+  const text = skip ? '' : document.getElementById('logInput').value.trim();
+  const durSec = pendingLogDurSec || 0;
+  const endDate = pendingEndTs ? new Date(pendingEndTs) : new Date();
+  const startDate = new Date(endDate.getTime() - durSec * 1000);
+  const pad = n => String(n).padStart(2,'0');
+  const startStr = `${pad(startDate.getHours())}:${pad(startDate.getMinutes())}`;
+  const endStr   = `${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
+  const entry = {
+    text: text || '(без описания)',
+    dur: fmtShort(durSec),
+    durSec: durSec,
+    date: todayStr(),
+    start: startStr,
+    end: endStr
+  };
+  workLog.push(entry);
+  localStorage.setItem('st_worklog', JSON.stringify(workLog));
+  document.getElementById('logModal').style.display = 'none';
+  renderLogToday(true);
+  renderLogHistory();
+}
+
+// ── LONG BREAK STRETCH MODAL ──
+function showStretchModal() {
+  const m = document.getElementById('stretchModal');
+  const v = document.getElementById('stretchVideo');
+  if (!m) return;
+  m.style.display = 'flex';
+  // Автоматически запускаем видео, если браузер разрешает
+  if (v && v.paused) {
+    v.play().catch(() => {});
+  }
+}
+function closeStretchModal() {
+  const m = document.getElementById('stretchModal');
+  const v = document.getElementById('stretchVideo');
+  if (m) m.style.display = 'none';
+  if (v && !v.paused) {
+    v.pause();
+  }
+}
+
+function toggleStretchSetting() {
+  const cb = document.getElementById('stretchToggle');
+  stretchEnabled = !!cb.checked;
+  localStorage.setItem('st_stretch_enabled', stretchEnabled ? '1' : '0');
+}
+
+// ── MOTIVATION ──
+function renderMotivation() {
+  const list = document.getElementById('motivationList');
+  if (!list) return;
+  list.innerHTML = '';
+  if (!motivation.length) {
+    list.innerHTML = '<div class="empty-msg">Добавь одну-две картинки или цитаты,<br>которые напоминают, зачем ты работаешь.</div>';
+    return;
+  }
+  motivation.forEach((m,i) => {
+    const el = document.createElement('div'); el.className = 'motivation-card';
+    let mediaHtml = '';
+    if (m.url) {
+      const lower = m.url.toLowerCase();
+      const isBlob = m.url.startsWith('blob:');
+      // blob-URL или неизвестное расширение по умолчанию считаем видео
+      const isVideo = isBlob ||
+        lower.endsWith('.mp4') || lower.endsWith('.webm') || lower.endsWith('.mov') ||
+        lower.endsWith('.m4v') || lower.endsWith('.mkv') || lower.endsWith('.avi') ||
+        lower.includes('youtube.com') || lower.includes('youtu.be');
+      if (isVideo) {
+        mediaHtml = `<div class="motivation-media video" data-url="${esc(m.url)}" onclick="openMediaFromEl(this,'video')"><video src="${esc(m.url)}" muted playsinline></video></div>`;
+      } else {
+        mediaHtml = `<div class="motivation-media" data-url="${esc(m.url)}" onclick="openMediaFromEl(this,'image')"><img src="${esc(m.url)}" alt=""></div>`;
+      }
+    }
+    el.innerHTML =
+      (m.text ? `<div class="motivation-text">${esc(m.text)}</div>` : '')+
+      mediaHtml+
+      `<div class="motivation-meta">${m.addedAt || ''}</div>`+
+      `<button class="del-btn" style="margin-top:.25rem" onclick="delMotivation(${i})">Удалить</button>`;
+    list.appendChild(el);
+  });
+}
+
+function addMotivation() {
+  const textEl  = document.getElementById('motText');
+  const fileEl  = document.getElementById('motFile');
+  const text  = (textEl.value || '').trim();
+  const file  = fileEl && fileEl.files ? fileEl.files[0] : null;
+  if (!text && !file) return;
+
+  // Если есть файл — сразу показываем превью через blob‑URL,
+  // а загрузку на сервер делаем фоном и обновляем ссылку позже.
+  if (file) {
+    const blobUrl = URL.createObjectURL(file);
+    const idx = motivation.length;
+    motivation.push({
+      text,
+      url: blobUrl,
+      addedAt: todayStr(),
+      temp: true
+    });
+    localStorage.setItem('st_motivation', JSON.stringify(motivation));
+    textEl.value  = '';
+    if (fileEl) fileEl.value = '';
+    renderMotivation();
+
+    const fd = new FormData();
+    fd.append('file', file);
+    fetch('/upload_motivation', { method:'POST', body: fd })
+      .then(r => r.json())
+      .then(res => {
+        if (res.ok && res.url && motivation[idx]) {
+          motivation[idx].url = res.url;
+          delete motivation[idx].temp;
+          localStorage.setItem('st_motivation', JSON.stringify(motivation));
+          renderMotivation();
+        }
+      })
+      .catch(() => {
+        // Если загрузка не удалась — blob‑URL всё равно будет работать до перезагрузки страницы
+      });
+  } else {
+    motivation.push({
+      text,
+      url: '',
+      addedAt: todayStr()
+    });
+    localStorage.setItem('st_motivation', JSON.stringify(motivation));
+    textEl.value  = '';
+    renderMotivation();
+  }
+}
+
+function delMotivation(i) {
+  motivation.splice(i,1);
+  localStorage.setItem('st_motivation', JSON.stringify(motivation));
+  renderMotivation();
+}
+
+// full-screen media viewer
+function openMediaFromEl(el, type) {
+  const url = el.getAttribute('data-url') || '';
+  if (!url) return;
+  openMediaViewer(url, type);
+}
+
+function openMediaViewer(url, type) {
+  const overlay = document.getElementById('mediaViewer');
+  const img = document.getElementById('mediaViewerImg');
+  const vid = document.getElementById('mediaViewerVideo');
+  if (!overlay || !img || !vid) return;
+  img.style.display = 'none';
+  vid.style.display = 'none';
+  if (type === 'image') {
+    img.src = url;
+    img.style.display = 'block';
+  } else {
+    vid.src = url;
+    vid.style.display = 'block';
+    vid.play().catch(()=>{});
+  }
+  overlay.style.display = 'flex';
+}
+
+function closeMediaViewer() {
+  const overlay = document.getElementById('mediaViewer');
+  const img = document.getElementById('mediaViewerImg');
+  const vid = document.getElementById('mediaViewerVideo');
+  if (!overlay || !img || !vid) return;
+  overlay.style.display = 'none';
+  img.style.display = 'none';
+  img.src = '';
+  if (!vid.paused) vid.pause();
+  vid.src = '';
+}
+
+// ── MANUAL ADD WORK ──
+function manualAdd() {
+  const topicEl = document.getElementById('manualTopic');
+  const startEl = document.getElementById('manualStart');
+  const endEl   = document.getElementById('manualEnd');
+  const addCb   = document.getElementById('manualAddTotal');
+  const start = (startEl.value || '').trim();
+  const end   = (endEl.value || '').trim();
+  if (!start || !end) return;
+  const [sh,sm] = start.split(':').map(x=>parseInt(x,10)||0);
+  const [eh,em] = end.split(':').map(x=>parseInt(x,10)||0);
+  const startSec = sh*3600 + sm*60;
+  const endSec   = eh*3600 + em*60;
+  if (endSec <= startSec) return;
+  const durSec = endSec - startSec;
+  const payload = { seconds: durSec, add_to_total: !!addCb.checked };
+  fetch('/manual_add', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  }).then(r=>r.json()).then(_ => {
+    const pad = n => String(n).padStart(2,'0');
+    const entry = {
+      text: (topicEl.value || '').trim() || '(без описания)',
+      dur: fmtShort(durSec),
+      durSec: durSec,
+      date: todayStr(),
+      start: `${pad(sh)}:${pad(sm)}`,
+      end:   `${pad(eh)}:${pad(em)}`,
+      manual: true
+    };
+    workLog.push(entry);
+    localStorage.setItem('st_worklog', JSON.stringify(workLog));
+    topicEl.value = '';
+    renderLogToday(true);
+    renderLogHistory();
+  }).catch(()=>{});
+}
+
+// ── GOAL CELEBRATION ──
+let goalCelebrated = false;
+
+// ── MILESTONES ──
+const MEMES = {
+  1: {
+    emoji: '🔥', title: 'Ты красавчик!', sub: 'Первый час — в кармане',
+    meme: `Ты только что отработал 1 час.\nЭто больше, чем делают 80% людей в своей прокрастинации.\n\n    ( •_•)\n    / >🏆  Держи`,
+  },
+  2: {
+    emoji: '⚡', title: 'Ты машина!', sub: '2 часа чистой работы',
+    meme: `2 часа? СЕРЬЁЗНО?\n\nМозг: "устал"\nТы: "нет"\nМозг: "ладно"\n\n  ┳━┳ノ( º _ ºノ)  непобедим`,
+  },
+  3: {
+    emoji: '🏆', title: 'Легенда!', sub: 'Три часа — это уже характер',
+    meme: `3 часа работы.\nЭто не случайность — это СИСТЕМА.\n\nSteve Jobs работал много.\nTim Cook работает много.\nТы тоже работаешь много.\n\n     🥇 Топ-tier`,
+  },
+  4: {
+    emoji: '💎', title: 'Монстр продуктивности!', sub: '4 часа — ты серьёзно настроен',
+    meme: `4 часа.\n\nАнтропологи изучают таких людей.\nЭкономисты пишут о них книги.\nТы просто сидишь и работаешь.\n\n  😤💪 BEAST MODE ACTIVATED`,
+  },
+  5: {
+    emoji: '🚀', title: 'Ты непобедим!', sub: '5 часов — это уже легенда',
+    meme: `5 ЧАСОВ?!\n\nЭто 300 минут.\n18000 секунд.\nОдин очень серьёзный день.\n\n  🌍 Мир принадлежит тебе`,
+  },
+};
+
+function checkMilestone(total, streak) {
+  // Streak chip
+  if (streak > 0) {
+    document.getElementById('streakChip').style.display = 'flex';
+    document.getElementById('streakVal').textContent = streak + (streak===1?' день':streak<5?' дня':' дней');
+  }
+
+  // Goal check
+  const goalSec = goalMin * 60;
+  if (goalSec > 0 && total >= goalSec && !goalCelebrated) {
+    goalCelebrated = true;
+    triggerCelebration('goal', total, streak);
+    return;
+  }
+
+  for (const ms of MILESTONES) {
+    if (total >= ms && !passedMilestones.includes(ms)) {
+      passedMilestones.push(ms);
+      localStorage.setItem('st_milestones', JSON.stringify(passedMilestones));
+      triggerCelebration(ms / 3600, total, streak);
+      break;
+    }
+  }
+}
+
+function triggerCelebration(type, total, streak) {
+  let data;
+  if (type === 'goal') {
+    data = {
+      emoji: '🎯', title: 'ЦЕЛЬ ВЫПОЛНЕНА!', sub: `Ты поставил цель — и выполнил её. Это и есть дисциплина.`,
+      meme: `ДНЕВНАЯ ЦЕЛЬ ДОСТИГНУТА!\n\nТы сказал "${fmtShort(goalMin*60)}" — и сделал.\nЭто называется ИНТЕГРИТЕТ.\n\n  🎯 GOAL DESTROYER`,
+    };
+  } else {
+    data = MEMES[type] || MEMES[1];
+  }
+
+  document.getElementById('celeEmoji').textContent    = data.emoji;
+  document.getElementById('celeTitle').textContent    = data.title;
+  document.getElementById('celeSubtitle').textContent = data.sub;
+  document.getElementById('memeBlock').innerHTML = data.meme.replace(/\n/g,'<br>');
+
+  const done = todos.filter(t=>t.done).length;
+  document.getElementById('celeStats').innerHTML = `
+    <div class="cele-stat-row"><span class="cele-stat-label">Всего отработано</span><span class="cele-stat-val">${fmt(total)}</span></div>
+    <div class="cele-stat-row"><span class="cele-stat-label">Блоков работы</span><span class="cele-stat-val">${workLog.length}</span></div>
+    <div class="cele-stat-row"><span class="cele-stat-label">Задач выполнено</span><span class="cele-stat-val">${done}/${todos.length}</span></div>
+    <div class="cele-stat-row"><span class="cele-stat-label">Серия дней 🔥</span><span class="cele-stat-val">${streak}</span></div>`;
+
+  if (workLog.length) {
+    document.getElementById('celeLog').style.display = 'block';
+    document.getElementById('celeLogItems').innerHTML = workLog.slice(-5).map(e =>
+      `<div class="cele-log-item"><div class="cele-log-dot"></div>${esc(e.text)}</div>`).join('');
+  }
+
+  document.getElementById('celebration').style.display = 'flex';
+  startConfetti();
+}
+
+function closeCelebration() {
+  document.getElementById('celebration').style.display = 'none';
+  stopConfetti();
+}
+
+// ── CONFETTI (on top, sharp) ──
+let cfAnim, cfParticles = [];
+const COLORS = ['#2563EB','#059669','#F59E0B','#EF4444','#8B5CF6','#EC4899','#06B6D4'];
+
+function startConfetti() {
+  const c = document.getElementById('confettiCanvas');
+  c.style.display = 'block';
+  c.width = window.innerWidth;
+  c.height = window.innerHeight;
+  const ctx = c.getContext('2d');
+  // Reset any transform
+  ctx.setTransform(1,0,0,1,0,0);
+
+  cfParticles = Array.from({length:150}, () => ({
+    x: Math.random() * c.width, y: -10 - Math.random()*300,
+    w: 6 + Math.random()*8, h: 10 + Math.random()*6,
+    color: COLORS[Math.floor(Math.random()*COLORS.length)],
+    vy: 2.5 + Math.random()*3, vx: (Math.random()-.5)*2,
+    angle: Math.random()*360, spin: (Math.random()-.5)*8,
+  }));
+
+  function draw() {
+    ctx.clearRect(0, 0, c.width, c.height);
+    cfParticles.forEach(p => {
+      p.y += p.vy; p.x += p.vx; p.angle += p.spin;
+      if (p.y > c.height) { p.y = -10; p.x = Math.random()*c.width; }
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.angle * Math.PI/180);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      ctx.restore();
+    });
+    cfAnim = requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function stopConfetti() {
+  if (cfAnim) cancelAnimationFrame(cfAnim);
+  const c = document.getElementById('confettiCanvas');
+  c.style.display = 'none';
+  c.getContext('2d').clearRect(0,0,c.width,c.height);
+}
+
+// ── RESET ──
+function resetCounter() {
+  if (!confirm('Сбросить счётчик и серию?')) return;
+  fetch('/reset_counter', {method:'POST'}).then(() => {
+    passedMilestones = []; goalCelebrated = false;
+    localStorage.setItem('st_milestones','[]');
+    document.getElementById('totalVal').textContent = '0 сек';
+  });
+}
+
+// ── POLL ──
+function poll() {
+  fetch('/status').then(r => r.json()).then(d => {
+    const mode  = d.mode || 'waiting';
+    const l1    = Array.isArray(d['1']) ? d['1'][0] : d['1'];
+    const v1    = Array.isArray(d['1']) ? d['1'][1] : '';
+    const l2    = Array.isArray(d['2']) ? d['2'][0] : d['2'];
+    const v2    = Array.isArray(d['2']) ? d['2'][1] : '';
+    const total = d.total_work || 0;
+    const streak = d.streak || 0;
+    const breakType = d.break_type || null;
+    const sessionTotal = d.session_total || 0;
+    const sessionElapsed = d.session_elapsed || 0;
+    const workDur = d.work_dur || 0;
+    const shortDur = d.short_dur || 0;
+    const longDur = d.long_dur || 0;
+
+    // Detect work→chill transition
+    if (lastMode === 'work' && mode === 'chill') {
+      const dur = total - blockStartTotal;
+      if (dur > 10) showLogModal(dur);
+      // Появление длинного перерыва — показываем модалку с видео растяжки (если включено)
+      longBreakModalShownForCurrentBreak = false;
+      if (breakType === 'long' && stretchEnabled) {
+        longBreakModalShownForCurrentBreak = true;
+        showStretchModal();
+      }
+    }
+    if ((lastMode === 'chill' || lastMode === 'waiting') && mode === 'work') {
+      blockStartTotal = total;
+      longBreakModalShownForCurrentBreak = false;
+    }
+    lastMode = mode;
+
+    // Подгоняем ширину шкалы под ширину крупного времени один раз (берём максимум)
+    const mainEl = document.getElementById('timerMain');
+    const wrapEl = document.querySelector('.timer-progress-wrap');
+    if (mainEl && wrapEl) {
+      const w = mainEl.offsetWidth;
+      if (w > 0) {
+        if (w > timerWidth) timerWidth = w;
+        wrapEl.style.width = timerWidth + 'px';
+      }
+    }
+
+    // Pill
+    const pill = document.getElementById('modePill');
+    pill.className = 'mode-pill ' + mode;
+    pill.textContent = {work:'Работа',chill:'Перерыв',paused:'Пауза',finished:'Завершено',waiting:'Ожидание'}[mode]||'Ожидание';
+
+    // Timer
+    document.getElementById('timerLabel').textContent = l1;
+    document.getElementById('timerMain').textContent  = v1 || '—';
+    document.getElementById('timerMain').className    = 'timer-main ' + (['work','chill','paused'].includes(mode) ? mode : '');
+
+    // Pause overlay sync
+    document.getElementById('pauseOverlay').classList.toggle('show', mode === 'paused');
+    document.getElementById('pauseBtn').classList.toggle('active', mode === 'paused');
+    // Skip-break button только в режиме перерыва
+    const skipBtn = document.getElementById('skipBreakBtn');
+    if (skipBtn) skipBtn.style.display = (mode === 'chill' ? 'inline-flex' : 'none');
+
+    // Временная шкала: показываем только ОДИН цикл таймера
+    const track = document.getElementById('timelineTrack');
+    const person = document.getElementById('timelinePerson');
+    if (track && person && sessionTotal > 0 && workDur > 0) {
+      const fullCycle = workDur * 4 + shortDur * 3 + longDur; // 4 работы, 3 коротких, 1 длинный
+      let windowStart = 0;
+      let windowLen = sessionTotal;
+
+      if (fullCycle > 0 && sessionTotal > fullCycle) {
+        // Вычисляем, в каком "глобальном" цикле мы находимся,
+        // и показываем только этот цикл (или его хвост)
+        const cycleIndex = Math.floor(sessionElapsed / fullCycle);
+        windowStart = Math.min(cycleIndex * fullCycle, Math.max(0, sessionTotal - fullCycle));
+        windowLen = Math.min(fullCycle, sessionTotal - windowStart);
+      }
+
+      if (windowLen <= 0) {
+        windowStart = 0;
+        windowLen = sessionTotal;
+      }
+
+      // Перестраиваем сегменты под текущее "окно"
+      [...track.querySelectorAll('.timeline-seg')].forEach(n => n.remove());
+      let t = 0;
+      let cycleLocal = 0;
+      let used = 0;
+
+      while (used < windowLen && cycleLocal < 1000) {
+        // work segment
+        let segLen = Math.min(workDur, windowLen - used);
+        const workDiv = document.createElement('div');
+        workDiv.className = 'timeline-seg work';
+        workDiv.style.width = (segLen / windowLen * 100) + '%';
+        track.insertBefore(workDiv, person);
+        used += segLen;
+        cycleLocal += 1;
+        if (used >= windowLen) break;
+
+        // break segment
+        const isLong = cycleLocal > 0 && cycleLocal % 4 === 0;
+        const brDur = isLong ? longDur : shortDur;
+        if (brDur <= 0) continue;
+        segLen = Math.min(brDur, windowLen - used);
+        const brDiv = document.createElement('div');
+        brDiv.className = 'timeline-seg break';
+        brDiv.style.width = (segLen / windowLen * 100) + '%';
+        track.insertBefore(brDiv, person);
+        used += segLen;
+      }
+
+      // Позиция человечка внутри текущего окна
+      let localElapsed = sessionElapsed - windowStart;
+      if (localElapsed < 0) localElapsed = 0;
+      if (localElapsed > windowLen) localElapsed = windowLen;
+      const pct = windowLen > 0 ? (localElapsed / windowLen) * 100 : 0;
+      person.style.left = Math.min(100, Math.max(0, pct)) + '%';
+      person.classList.toggle('chill', mode === 'chill');
+    }
+
+    // Cards
+    const mc = mode==='work'?' work-card':mode==='chill'?' chill-card':'';
+    document.getElementById('totalCard').className = 'info-card' + mc;
+    document.getElementById('subCard').className   = 'info-card' + mc;
+    // Stacked total
+    const ts = fmtStack(total);
+    document.getElementById('totalH').textContent = ts.h;
+    document.getElementById('totalM').textContent = ts.m;
+    document.getElementById('totalS').textContent = ts.s;
+    document.getElementById('subLabel').textContent = v2 ? l2.replace(':','') : (mode==='work' ? 'До перерыва' : mode==='chill' ? 'До работы' : '—');
+    const ss = splitTimeStr(v2 || '');
+    document.getElementById('subMin').textContent = ss.min;
+    document.getElementById('subSec').textContent = ss.sec;
+    document.getElementById('logTotalVal').textContent = fmt(total);
+
+    // Goal progress — only update totals, не перерисовываем список целиком
+    document.getElementById('logTotalVal').textContent = fmt(total);
+    const goalSec = goalMin * 60;
+    if (goalSec > 0) {
+      const pct = Math.min(100, Math.round(total / goalSec * 100));
+      document.getElementById('goalProg').style.width = pct + '%';
+      document.getElementById('goalProg').className = 'goal-progress-fill' + (pct >= 100 ? ' done' : '');
+      document.getElementById('goalCurrent').textContent = fmtShort(total);
+      document.getElementById('goalTarget').textContent  = fmtShort(goalSec);
+    }
+
+    // Milestones
+    if (['work','chill'].includes(mode)) checkMilestone(total, streak);
+
+    // Finished
+    if (mode==='finished' && !finishedShown) {
+      finishedShown = true;
+      document.getElementById('finBanner').classList.add('show');
+      document.getElementById('finBannerSub').textContent = `Отработано сегодня: ${fmt(total)}.`;
+    }
+    if (['work','chill'].includes(mode)) { finishedShown=false; document.getElementById('finBanner').classList.remove('show'); }
+  }).catch(()=>{});
+}
+
+// ── INIT ──
+document.getElementById('sGoalH').textContent = goalMin/60 % 1 === 0 ? goalMin/60 : (goalMin/60).toFixed(1);
+// Инициализация чекбокса напоминания о растяжке
+const stretchCb = document.getElementById('stretchToggle');
+if (stretchCb) stretchCb.checked = stretchEnabled;
+// Инициализация ширины статус-бара (под "00 мин 00 сек")
+initTimerWidth();
+// Миграция: все старые записи (без даты) уводим в историю
+migrateWorkLogDates();
+// Миграция мотивации (убираем заголовки)
+migrateMotivation();
+renderNotes();
+renderTodos();
+renderLogToday(true);
+renderLogHistory();
+renderMotivation();
+document.getElementById('logInput').addEventListener('keydown', e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();saveLog(false);} });
+poll(); setInterval(poll, 1000);
+</script>
+</body>
+</html>
